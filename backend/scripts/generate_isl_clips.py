@@ -42,7 +42,15 @@ WORDS = [
     "today", "tomorrow", "yesterday", "now", "later",
     "water", "food", "home", "school", "work",
     "happy", "sad", "hot", "cold", "big", "small", "new",
-    "unknown",
+    "friend", "family", "mother", "father", "brother", "sister",
+    "teacher", "student", "doctor", "time", "day", "week",
+    "month", "year", "left", "right", "up", "down",
+    "inside", "outside", "open", "close", "start", "finish",
+    "read", "write", "speak", "listen", "walk", "run",
+    "sit", "stand", "sleep", "eat", "drink", "buy",
+    "sell", "call", "wait", "play", "clean", "dirty",
+    "fast", "slow", "strong", "weak", "early", "late",
+    "beautiful", "important", "unknown"
 ]
 
 ISL_PROMPT_TEMPLATE = """A photorealistic video of an Indian Sign Language (ISL) interpreter 
@@ -68,11 +76,9 @@ def generate_clip(word: str) -> bool:
     s3_output_key = f"nova-reel-output/{word}.mp4"
 
     try:
-        response = bedrock.invoke_model(
+        response = bedrock.start_async_invoke(
             modelId="amazon.nova-reel-v1:0",
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps({
+            modelInput={
                 "taskType": "TEXT_VIDEO",
                 "textToVideoParams": {"text": prompt},
                 "videoGenerationConfig": {
@@ -80,17 +86,16 @@ def generate_clip(word: str) -> bool:
                     "fps": 24,
                     "dimension": "1280x720",
                     "seed": abs(hash(word)) % 2147483647,
-                },
-                "outputDataConfig": {
-                    "s3OutputDataConfig": {
-                        "s3Uri": f"s3://{S3_OUTPUT_BUCKET}/{s3_output_key}"
-                    }
-                },
-            }),
+                }
+            },
+            outputDataConfig={
+                "s3OutputDataConfig": {
+                    "s3Uri": f"s3://{S3_OUTPUT_BUCKET}/{s3_output_key}"
+                }
+            }
         )
 
-        result = json.loads(response["body"].read())
-        invocation_arn = result.get("invocationArn")
+        invocation_arn = response.get("invocationArn")
 
         if not invocation_arn:
             print(f"FAILED — no invocationArn returned")
